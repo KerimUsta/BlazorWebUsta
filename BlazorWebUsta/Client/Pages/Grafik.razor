@@ -1,0 +1,101 @@
+﻿@page "/grafik"
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using Tasarım.Shared;
+@using ustakerimhost.Models
+@inject IJSRuntime JSRuntime
+@inject HttpClient httpClient
+
+@code {
+    private List<GrafikModel> grafikVerileri = new List<GrafikModel>();
+    private int birinciYil = DateTime.Now.Year - 1; // İlk yıl varsayılan olarak bir önceki yıl
+    private int ikinciYil = DateTime.Now.Year; // İkinci yıl varsayılan olarak bu yıl
+
+    // API'den verileri almak için kullanılan metod
+    private async Task VerileriAl()
+    {
+        var onay = new GrafikGirilen
+            {
+                birinciyil = birinciYil.ToString(),
+                ikinciyil = ikinciYil.ToString()
+            };
+        var response = await httpClient.PostAsJsonAsync("/WeatherForecast/GrafikListele", onay);
+
+        if (response.IsSuccessStatusCode)
+        {
+            grafikVerileri = await response.Content.ReadFromJsonAsync<List<GrafikModel>>();
+            // Call the JavaScript function to create the Chart.js chart
+            await JSRuntime.InvokeVoidAsync("createBarChart", "myColumnChart", GetLabels(grafikVerileri), GetData1(grafikVerileri), GetData2(grafikVerileri),birinciYil,ikinciYil);
+        }
+    }
+
+    private List<string> GetLabels(List<GrafikModel> data)
+    {
+        // Implement this method to extract labels from your data
+        // For example, you can extract AY values from grafikVerileri
+        return data.Select(item => item.AY).ToList();
+    }
+
+    private List<string> GetData1(List<GrafikModel> data)
+    {
+        // Implement this method to extract TOPLAM1 values from your data
+        return data.Select(item => item.TOPLAM1).ToList();
+    }
+
+    private List<string> GetData2(List<GrafikModel> data)
+    {
+        // Implement this method to extract TOPLAM2 values from your data
+        return data.Select(item => item.TOPLAM2).ToList();
+    }
+}
+
+<div>
+    <label>İlk Yıl: </label>
+    <input type="text" @bind="birinciYil" />
+    <br />
+    <label>İkinci Yıl: </label>
+    <input type="text" @bind="ikinciYil" />
+    <br />
+    <button @onclick="VerileriAl">Verileri Getir</button>
+</div>
+
+<div style="width: 500px; height: 500px;">
+    <canvas id="myColumnChart" width="100px" height="100px"></canvas>
+    
+</div>
+
+<script>
+    // Your existing JavaScript code for creating the Chart.js chart
+    function createBarChart(chartId, labels, data1, data2, birinciYil, label2) {
+        var ctx = document.getElementById(chartId).getContext('2d');
+        var config = {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: birinciYil,
+                    data: data1,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }, {
+                    label: label2,
+                    data: data2,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        };
+        var chart = new Chart(ctx, config);
+    }
+</script>
